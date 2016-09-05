@@ -2,24 +2,40 @@ from heapq import nsmallest
 
 def parse_training_set():
     training_file = open("sm_train.dat","r")
-    sentiments = []
-    texts = []
+    reviews = dict()
+    i = 0
     for line in training_file:
         split_line = line.split('\t', 1)
-        sentiments.append(split_line[0])
-        texts.append(split_line[1])
-    return sentiments, texts
-
-def calc_feature(text_list):
+        sentiment = split_line[0]
+        text = split_line[1]
+        review = Amazon_review(text)
+        review.sentiment = sentiment
+        review.dist_attr = value_calc(review)
+        [i] = review
+        i+=1
+    return reviews
+    
+def parse_test_set():
+    test_file = open("sm_test.dat","r")
+    reviews = dict()
+    i = 0
+    for line in test_file:
+        review = Amazon_review(line)
+        review.dist_attr = value_calc(review)
+        reviews[i] = review
+        i+=1
+    return reviews
+    
+def calc_feature(text_dict):
     feature_calcs = []
-    for line in text_list:
-        calc = len(line)
-        feature_calcs.append(calc)
+    for key, review in test_dict.items():
+        calc = value_calc(review)
+        text_dict[key].dist_attr(calc)
     return(feature_calcs)
 
-def parse_test_set():
-    test_file = open("sm_test.dat","r").read()
-    return test_file.split('\n')
+def value_calc(review):
+    return len(review.dist_attr)
+    
 
 def classify(k,training_zip, test_zip):
     #for each test entity z
@@ -34,8 +50,6 @@ def classify(k,training_zip, test_zip):
         neighbors = k_NN(k,training_zip,list(test_zip)[1])
 #        test.append(vote(neighbors))
        
-
- 
 def k_NN(k,training_set,test_calc):
 #    sorte
 #    while(k>0):
@@ -61,20 +75,18 @@ def main():
     k = 4
 
     #get training set
-    training_sentiments, training_texts = parse_training_set()
-
+    training_dict = parse_training_set()
+    print(training_dict)
+    
     #calculate features
-    training_calcs=calc_feature(training_texts)
-    #zip combines the lists together [(x1,y1,z1),(x2,y2,z2)..] use list(zip)
-    training_zip = zip(training_sentiments,training_texts,training_calcs)
+    training_set = calc_feature(training_dict)
 
 #    #get test set
 #    #compute distance for (xi,z)
-    test_text = parse_test_set()
-    test_calc = calc_feature(test_text)
-    test_zip = zip(test_text, test_calc)
-    
-    classify(k, training_zip, test_calc)
+    test_dict = parse_test_set()
+    test_set = calc_feature(test_dict)
+
+    classify(k, training_set, test_set)
 
 
 if __name__ == '__main__':
