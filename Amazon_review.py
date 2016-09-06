@@ -1,9 +1,13 @@
 class Amazon_review:
-    sentiment = 0
-    text = ''
-    dist_attr = null
+    global sentiment
+    global text
+    global dist_attr 
     
     def __init__(self, text):
         self.text = text
+        sentiment = ''
+        dist_attr = 0 
+
     
-    
+    def toPrint(self):
+        print(sentiment, text, dist_attr)
