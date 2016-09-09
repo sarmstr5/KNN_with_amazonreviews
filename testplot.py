@@ -6,10 +6,9 @@ import pandas as pd
 
 def plot():
     test_data = pd.read_csv('sentiment_output', delimiter='\t')
-    print("hello")
-    print(test_data)
-    plt.savefig('test.png')
     plt.plot(test_data)
+    #plt.savefig('test.png')
+    plt.show()
 def main():
     plot()
 
