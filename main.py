@@ -15,9 +15,9 @@ train_data = 'sm_train.dat'
 test_data = 'sm_test.dat'
 sent_dict = {}
 #----for normalization---#
-global longest_review
-global most_negative_review
-global most_positive_review
+longest_review = 0
+most_negative_review = 0
+most_positive_review = 0
 
 #------------------------#
 #using sentiWordNet as dictionary for sentiment
@@ -94,11 +94,11 @@ def value_calc(review, sentiment_dict):
             neg_count+= sentiment_dict[word][1]
 
     if(most_negative_review<neg_count):
-        most_negative_review = neg_count
+        global most_negative_review = neg_count
     if(most_positive_review<pos_count):
-        most_positive_review = pos_count
+        global most_positive_review = pos_count
     if(longest_review<length):
-        longest_review = length
+        global longest_review = length
 
     return [pos_count, neg_count, length]
     
