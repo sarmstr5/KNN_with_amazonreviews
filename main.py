@@ -2,6 +2,7 @@ from heapq import nsmallest
 from Amazon_review import Amazon_review
 import matplotlib.pyplot as plt
 import numpy as np
+import csv
 from nltk import corpus
 from nltk import tokenize as tok
 
@@ -12,20 +13,35 @@ stop_words = set(corpus.stopwords.words("english"))
 stop_words.discard("not")
 train_data = 'sm_train.dat'
 test_data = 'sm_test.dat'
+sent_dict = {}
+#----for normalization---#
+global longest_review
+global most_negative_review
+global most_positive_review
 
 #------------------------#
-def read_in_dict(word_dictionary, dict_sent):
-    dict = open(word_dictionary, 'r') 
-    new_dict = {}
-    sentiment = -1 
-    if dict_sent == '+1':
-        sentiment = 1
-
-    for word in dict: 
-        if word.startswith(';'):
-            continue
-        new_dict[word]=sentiment
-    return new_dict
+#using sentiWordNet as dictionary for sentiment
+#no particular reason to use sentiWordNet over others
+def read_in_dict(word_dictionary):
+    print("In read_in_dict")
+    with open(word_dictionary) as csv_file:
+        dict_csv = csv.reader(csv_file,delimiter = '\t')
+        new_dict = {}
+        for row in dict_csv:
+            if row[0].startswith('#'):
+                continue
+            terms = row[4]
+            first_term = terms.split('#')[0]
+            #File has empty lines so try to read if fail skip
+            #file has terms that have 0 for positive and negative weights
+            #taking them out of the dict
+            try:
+                if float(row[2])==0 and float(row[3]) == 0.0:
+                    continue
+            except ValueError:
+                pass
+            new_dict[first_term]= [float(row[2]), float(row[3])]
+        return new_dict
 
 
 def plot(test_results):
@@ -44,48 +60,49 @@ def tokenizer(review):
             trimmed_review.append(w)
     return trimmed_review
 
-def parse_training_set(training_file):
+def parse_training_set(training_file,sent_dict):
     print("------> In parse_training_set\n")
     reviews =[] 
     for line in training_file:
         split_line = line.split('\t', 1)
         review = Amazon_review(tokenizer(split_line[1]))
         review.sentiment = split_line[0].strip()
-        review.mapping = value_calc(review)
+        review.mapping = value_calc(review, sent_dict)
         reviews.append(review)
     return reviews
 
-def parse_test_set(test_file):
+def parse_test_set(test_file, sent_dict):
     print("------> In parse_test_set\n")
     reviews =[] 
     for line in test_file:
         review = Amazon_review(tokenizer(line))
-        review.mapping = value_calc(review)
+        review.mapping = value_calc(review, sent_dict)
         review.sentiment = ""
         reviews.append(review)
 
     return reviews
     
-def calc_feature(text_list):
-    print("------> In calc_feature\n")
-    feature_calcs = []
-    i = 0
-    while(i<len(text_list)): 
-        calc = value_calc(text_list[i])
-#        print(i,calc)
-        text_list[i].mapping=calc
-        i+=1
-    return(text_list)
-
 #Need to update
-def value_calc(review):
-    #look at creating frequency tree later
-    pass
-#    for words in review.text:
-#
-#
-#    return len(review.text)
+def value_calc(review, sentiment_dict):
+    length = len(review.text)
+    pos_count = 0
+    neg_count = 0
+    for word in review.text:
+        if word in sentiment_dict:
+            #freq_dict[word]+=1
+            pos_count+= sentiment_dict[word][0]
+            neg_count+= sentiment_dict[word][1]
+
+    if(most_negative_review<neg_count):
+        most_negative_review = neg_count
+    if(most_positive_review<pos_count):
+        most_positive_review = pos_count
+    if(longest_review<length):
+        longest_review = length
+
+    return [pos_count, neg_count, length]
     
+
 def k_NN(k,training_set,test_set):
     #for each test entity z
     #select k nearest xi's
@@ -121,24 +138,28 @@ def vote(k_neighbors, test_review):
         return '+1'
     else:
         return '-1'
+def reduce_dictionary(sentiment_dict):
+    pass
 
 def main():
     training_file = open(train_data,"r")
     test_file = open(test_data,"r")
-    postive_dict = read_in_dict('positive-words.txt', '+1')
-    negative_dict = read_in_dict('negative-words.txt', '-1')
-    print(negative_dict)
-    print(postive_dict)
-    input(' the dicts')
+    sent_dict = read_in_dict('senti')
+    most_negative_review = 0
+    most_positive_review = 0
+    longest_review = 0
     #-----------------------------------------------------#
 
     print("Initializing program")
     #get training set and calculate distance feature
-    training_list = parse_training_set(training_file)
+    training_list = parse_training_set(training_file,sent_dict)
 
     #get test set and set attributes
     print("Training set created, Next test creation")
-    test_list = parse_test_set(test_file)
+    test_list = parse_test_set(test_file, sent_dict)
+
+    #reduce the dictionary to the most common words
+    reduce_dictionary(sent_dict)
 
     #Classify test set
     test_set = k_NN(k, training_list, test_list)
