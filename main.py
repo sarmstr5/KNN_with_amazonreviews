@@ -12,7 +12,21 @@ stop_words = set(corpus.stopwords.words("english"))
 stop_words.discard("not")
 train_data = 'sm_train.dat'
 test_data = 'sm_test.dat'
+
 #------------------------#
+def read_in_dict(word_dictionary, dict_sent):
+    dict = open(word_dictionary, 'r') 
+    new_dict = {}
+    sentiment = -1 
+    if dict_sent == '+1':
+        sentiment = 1
+
+    for word in dict: 
+        if word.startswith(';'):
+            continue
+        new_dict[word]=sentiment
+    return new_dict
+
 
 def plot(test_results):
     pass
@@ -52,22 +66,25 @@ def parse_test_set(test_file):
 
     return reviews
     
-def calc_feature(text_dict):
+def calc_feature(text_list):
     print("------> In calc_feature\n")
     feature_calcs = []
     i = 0
-    while(i<len(text_dict)): 
-        #print("this is key :"+str(key))
-        calc = value_calc(text_dict[i])
+    while(i<len(text_list)): 
+        calc = value_calc(text_list[i])
 #        print(i,calc)
-        text_dict[i].mapping=calc
-#        print("should be the same as calc: "+ str(text_dict[i].mapping))
+        text_list[i].mapping=calc
         i+=1
-    return(text_dict)
+    return(text_list)
 
 #Need to update
 def value_calc(review):
-    return len(review.text)
+    #look at creating frequency tree later
+    pass
+#    for words in review.text:
+#
+#
+#    return len(review.text)
     
 def k_NN(k,training_set,test_set):
     #for each test entity z
@@ -108,24 +125,31 @@ def vote(k_neighbors, test_review):
 def main():
     training_file = open(train_data,"r")
     test_file = open(test_data,"r")
+    postive_dict = read_in_dict('positive-words.txt', '+1')
+    negative_dict = read_in_dict('negative-words.txt', '-1')
+    print(negative_dict)
+    print(postive_dict)
+    input(' the dicts')
     #-----------------------------------------------------#
 
-    print("before parsing")
+    print("Initializing program")
     #get training set and calculate distance feature
-    training_dict = parse_training_set(training_file)
-    print("Training parse next feature calc")
-    training_set = calc_feature(training_dict)
-    #print(training_set)
-    #get test set, compute distance for (xi,z)
-    print("Training set created, Next test dict creation")
-    test_dict = parse_test_set(test_file)
-    print("test_set feature calc")
-    test_set = calc_feature(test_dict)
-    print("calculated features for test set and training set, next classify")
-    test_set = k_NN(k, training_set, test_set)
-    
+    training_list = parse_training_set(training_file)
+
+    #get test set and set attributes
+    print("Training set created, Next test creation")
+    test_list = parse_test_set(test_file)
+
+    #Classify test set
+    test_set = k_NN(k, training_list, test_list)
     training_file.close()
     test_file.close()
+    
+#    print("Training parse next feature calc")
+#    training_set = calc_feature(training_list)
+#    print(training_set)
+#    print("test_set feature calc")
+#    test_set = calc_feature(test_list)
 
 if __name__ == '__main__':
     main()
