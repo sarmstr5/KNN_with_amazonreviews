@@ -41,7 +41,7 @@ class Amazon_review:
     #creating class property setters
     @least_negative_review.setter
     def least_negative_review(self, value):
-        self._least_negative_review = value
+        self.least_negative_review = value
     @least_positive_review.setter
     def least_positive_review(self, value):
         self._least_positive_review = value
