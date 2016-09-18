@@ -34,28 +34,11 @@ begin_time = datetime.datetime.now().time()
 #------------------------#
 #using sentiWordNet as dictionary for sentiment
 #no particular reason to use sentiWordNet over others
+#cleaned and saved as a JSON file
 def read_in_dict(word_dictionary):
-    print("In read_in_dict")
-    with open(word_dictionary) as csv_file:
-        dict_csv = csv.reader(csv_file,delimiter = '\t')
-        new_dict = {}
-        for row in dict_csv:
-            if row[0].startswith('#'):
-                continue
-            terms = row[4]
-            first_term = terms.split('#')[0]
-            #File has empty lines so try to read if fail skip
-            #file has terms that have 0 for positive and negative weights
-            #taking them out of the dict
-            try:
-                if float(row[2])==0 and float(row[3]) == 0.0:
-                    continue
-            except ValueError:
-                pass
-            new_dict[first_term]= [float(row[2]), float(row[3])]
-
-    return new_dict
-
+    with open('dictionary/cleaned_senti') as js:
+        sentiment_dict = json.load(js)
+    return sentiment_dict 
 
 def plot(test_results):
     pass
