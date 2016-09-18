@@ -9,6 +9,7 @@ class Amazon_review:
     _most_negative_review = 0
     _longest_review = 0
     _shortest_review = _some_big_number
+    test_sentiment = 0
 
     def __init__(self, text):
         self.text = text
