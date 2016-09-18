@@ -57,6 +57,8 @@ trimmed_freq_dict = {}
 trimmed_sent_dict = {}
 # trimming sentiment and frequency dictionaries
 # dictionaries are hashtables so turning into tuples to sort by value
+print("length of frequency dictionary is " + str(len(freq_dict)))
+print("length of sentiment dictionary is " + str(len(sent_dict)))
 freq_sorted = sorted(freq_dict.items(), key = lambda x: x[1], reverse = True)
 sent_sorted = sorted(sent_dict.items(), key = lambda x: x[1])
 trimmed_freq_index = int(len(freq_sorted)*.3)

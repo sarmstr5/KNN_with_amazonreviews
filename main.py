@@ -13,16 +13,13 @@ from nltk import tokenize as tok
 training_set = []
 test_set = []
 k = 5 #needs to be updated
-stop_words = set(corpus.stopwords.words("english"))
-stop_words.discard("not")
-small_train = 'sm_train.dat'
-small_test = 'sm_test.dat'
-train = 'train_data'
-test = 'test_data'
+small_train = 'data/sm_train.dat'
+small_test = 'data/sm_test.dat'
+train = 'data/tokenized_train_data'
+test = 'data/tokenized_test_data'
 train_data = train
 test_data = test
-sent_dict = {}
-freq_dict = {}
+
 #----for normalization---#
 longest_review = 0
 shortest_review = 0
@@ -30,7 +27,7 @@ most_negative_review = 0
 least_negative_review = 0
 most_positive_review = 0
 least_positive_review = 0
-begin_time = datetime.datetime.now().time()
+begin_time = datetime.datetime.now().now()
 #------------------------#
 #using sentiWordNet as dictionary for sentiment
 #no particular reason to use sentiWordNet over others
@@ -47,21 +44,12 @@ def plot(test_results):
     plt.plot(dists, sentiments)
     plt.show()
 
-def tokenizer(review):
-#    print("------> In tokenizer\n")
-    tokenized_review = tok.word_tokenize(review)
-    trimmed_review = []
-    for w in tokenized_review:
-        if w not in stop_words:
-            trimmed_review.append(w)
-    return trimmed_review
-
 def parse_training_set(training_file,sent_dict):
     print("------> In parse_training_set\n")
     reviews =[] 
     for line in training_file:
         split_line = line.split('\t', 1)
-        review = Amazon_review(tokenizer(split_line[1]))
+        review = Amazon_review(tok.word_tokenize(split_line[1]))
         review.sentiment = split_line[0].strip()
         review.mapping = value_calc(review, sent_dict)
         reviews.append(review)
@@ -71,14 +59,13 @@ def parse_test_set(test_file, sent_dict):
     print("------> In parse_test_set\n")
     reviews =[] 
     for line in test_file:
-        review = Amazon_review(tokenizer(line))
+        review = Amazon_review(tok.word_tokenize(line))
         review.mapping = value_calc(review, sent_dict)
         review.sentiment = ""
         reviews.append(review)
-
     return reviews
-    
-def value_calc(review, sentiment_dict):
+# I have the given dictionary and one created from training set    
+def value_calc(review, sentiWord_d, created_sent_d, freq_d):
 #    print("------> In value_calc \n")
     length = len(review.text)
     global most_negative_review
@@ -87,17 +74,17 @@ def value_calc(review, sentiment_dict):
     global least_positive_review
     global longest_review
     global shortest_review
-    pos_count = 0
-    neg_count = 0
+    given_pos_count = 0
+    given_neg_count = 0
+    my_neg_count = 0
+    my_pos_count = 0
 
     for word in review.text:
         if word in sentiment_dict:
-            #freq_dict[word] = freq_dict.get(word, 0)+1
             pos_count+= sentiment_dict[word][0]
             neg_count+= sentiment_dict[word][1]
 
     #keeping track of normalization variables
-    
     if(most_negative_review<neg_count):
         most_negative_review = neg_count
     elif(least_negative_review>neg_count):
@@ -124,7 +111,8 @@ def k_NN(k,training_set,test_set):
     #add z to classification set
     #print("------> In K-NN")
     neighbors = []
-    output= open("sentiment_output"+str(datetime.datetime.now().time()),'wt')
+    time = datetime.datetime.now()
+    output= open("sentiment_output"+str(time.hour)+str(time.minute),'wt')
     i =0
     #need to return the the tuples of the training set (at least the sentiment)
     for review in test_set:
@@ -144,12 +132,12 @@ def normalize(x, xmin, xmax):
     return((x - xmin)/(xmax - xmin))
 
 def get_dist(review1, review2):
-    global most_negative_review 
-    global least_negative_review
-    global most_positive_review
-    global least_positive_review
-    global longest_review
-    global shortest_review
+#    global most_negative_review 
+#    global least_negative_review
+#    global most_positive_review
+#    global least_positive_review
+#    global longest_review
+#    global shortest_review
     r1_p = normalize(review1.mapping[0],least_positive_review,most_positive_review)
     r1_n = normalize(review1.mapping[1],least_negative_review,most_negative_review)
     r1_d = normalize(review1.mapping[2],shortest_review, longest_review)
