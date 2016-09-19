@@ -2,14 +2,13 @@ from heapq import nsmallest
 from Amazon_review import Amazon_review
 from sys import stdout
 from random import shuffle
-import datetime
 from datetime import datetime as dt
 import json
 import math
 
 training_set = []
 test_set = []
-small_train = 'data/sm_train.dat'
+small_train = 'sm_train.dat'
 small_test = 'data/sm_test.dat'
 train = 'tokenized_training_data'
 test = 'tokenized_test_data'
@@ -60,8 +59,8 @@ def find_max_min(a_list):
     max_senti = max(a_list, key=lambda review: review.mapping[0]).mapping[0]
     min_learned = min(a_list, key=lambda review: review.mapping[1]).mapping[1]
     max_learned = max(a_list, key=lambda review: review.mapping[1]).mapping[1]
-    min_len = min(a_list, key=lambda review: review.mapping[1]).mapping[2]
-    max_len = max(a_list, key=lambda review: review.mapping[1]).mapping[2]
+    min_len = min(a_list, key=lambda review: review.mapping[2]).mapping[2]
+    max_len = max(a_list, key=lambda review: review.mapping[2]).mapping[2]
     return min_senti, max_senti, min_learned, max_learned, min_len, max_len
 
 
@@ -71,15 +70,14 @@ def k_NN(k, training_set, test_set):
     # call set selection algorithm
     # add z to classification set
     # print("------> In K-NN")
-    neighbors = []
     i = 0
     for review in test_set:
         neighbors = nsmallest(k, training_set, key=lambda train_review: get_dist(train_review, review))
         review.test_sentiment = weighted_vote(neighbors, review)
-        i += 1
-        stdout.write("\r%d" % i)
-        stdout.flush()
-    stdout.write('\n')
+    #     i += 1
+    #     stdout.write("\r%d"%i)
+    #     stdout.flush()
+    # stdout.write('\n')
     return test_set
 
 
@@ -96,8 +94,10 @@ def get_dist(review1, review2):
     x1_d = normalize(review1.mapping[2], min_length, max_length)
     x2_d = normalize(review2.mapping[2], min_length, max_length)
     # have not done anything for the dot product yet
+    #weights of sentiWord, learnedWord, length
+    w1, w2, w3 = .5, .35, .15
     # pythagorean theorem
-    distance = math.sqrt((x2_s - x1_s) ** 2 + (x2_l - x1_l) ** 2 + (x2_d - x1_d) ** 2)
+    distance = math.sqrt(w1*(x2_s - x1_s) ** 2 + w2*(x2_l - x1_l) ** 2 + w3*(x2_d - x1_d) ** 2)
     return distance
 
 
@@ -109,7 +109,11 @@ def weighted_vote(k_neighbors, test_review):
     negative_count = 0.0
     for neighbor in k_neighbors:
         dist = get_dist(test_review, neighbor)
-        print(dist)
+        if(dist == 0):
+            # can test by reading out to file
+            # neighbor.toPrint()
+            # print(str(training_set.index(neighbor)))
+            continue
         if (neighbor.sentiment == '+1'):  # need to validate this check
             positive_count += 1 / dist
 
@@ -124,11 +128,13 @@ def weighted_vote(k_neighbors, test_review):
 def calculate_prediction_error(cross_validated_set):
     correct_predictions = 0.0
     num_of_predictions = len(cross_validated_set)
+    print(num_of_predictions)
     for review in cross_validated_set:
         if (review.test_sentiment == review.sentiment):
             correct_predictions += 1
     # ratio of correct predictions e.g. 0.66
-    error_percent = ((num_of_predictions - correct_predictions) / num_of_predictions)
+    error_percent = (correct_predictions / num_of_predictions)
+    print("correct predictions: {0} the num of predictions: {1}, {2}%".format(correct_predictions, num_of_predictions, error_percent))
     return error_percent
 
 
@@ -159,49 +165,46 @@ def get_cross_validation_lists(train_set, li, ri):
 sentiWord_d = read_in_dict('cleaned_senti')
 trained_d = read_in_dict('training_sent_dict')
 freq_d = read_in_dict('training_frequency_dict')
-training_set = parse_training_set('tokenized_training_data', sentiWord_d, trained_d, freq_d)
+training_set = parse_training_set(train, sentiWord_d, trained_d, freq_d)
 min_sentiWord, max_sentiWord, min_learnedWord, max_learnedWord, min_length, max_length = find_max_min(training_set)
 
-print('min/max sentiWord learnedWord, length, {0}/{1} {2}/{3} {4}/{5} '.format(min_sentiWord, max_sentiWord,
-                                                                               min_learnedWord, max_learnedWord,
-                                                                               min_length, max_length))
+# print('min/max sentiWord learnedWord, length, {0}/{1} {2}/{3} {4}/{5} '.format(min_sentiWord, max_sentiWord,
+#                                                                                min_learnedWord, max_learnedWord,
+#                                                                                min_length, max_length))
 shuffle(training_set)
 # Using cross validation to find parameters and attributes
 # Need to find correct k (odd), attributes (word dict, length, dot product,
 # etc.), attribute weights, compare object to each other
 k = 5
-final_k = 100
+final_k = 300
 weights = {'given_sentiment': 0.40, 'training_sentiment': 0.2, 'len': 0.2, 'dot_prod': 0.2}
 
 # breaking up the data into groups
-partitions = 5
 file_size = len(training_set)
+partitions = 5
 partition_size = (file_size / partitions)
 predictions = []
 error_rate = {}
 time = dt.now()
 validation_file = "cross_validation_results" + str(time.hour) + str(time.minute) + '.csv'
 # need to change for different attributes, k easiest right now
-for k in range(final_k):
+while(k < final_k):
     cross_validated_test_set = []
-    k += 2
     for i in range(partitions):
         # splitting into test/train partitions
+        # print(time)
+        # print('this is k: {0} \t this is partition: {1}'.format(k, i))
         left_i, right_i = get_partition_indices(i, partition_size, partitions)
         train_partition, test_partition = get_cross_validation_lists(training_set, left_i, right_i)
-        print(train_partition[:10])
-        print(train_partition[0].text)
-        print(test_partition[:10])
-        print(test_partition[0].text)
 
         # predicting their sentiment
         test_predictions = k_NN(k, train_partition, test_partition)
         cross_validated_test_set = cross_validated_test_set + test_predictions
 
-    error_rate[k] = calculate_prediction_error(cross_validated_test_set)
-    time = dt.datetime.now()
+    error_rate = calculate_prediction_error(cross_validated_test_set)
+    time = dt.now()
     print("on {0} and the time is: {1}".format(k, time))
+    k += 10
 
-with open(validation_file, 'a') as csv:
-    for key, value in sorted(error_rate.items()):
-        csv.write('{0}\t{1}\n'.format(key, value))
+    with open(validation_file, 'a') as csv:
+        csv.write('{0}\t{1}\n'.format(k, error_rate))
