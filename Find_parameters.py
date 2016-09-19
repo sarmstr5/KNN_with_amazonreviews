@@ -3,8 +3,11 @@ from Amazon_review import Amazon_review
 from sys import stdout
 from random import shuffle
 from datetime import datetime as dt
+from threading import Thread
+from multiprocessing.pool import ThreadPool
 import json
 import math
+import concurrent
 
 training_set = []
 test_set = []
@@ -73,7 +76,10 @@ def k_NN(k, training_set, test_set):
     i = 0
     for review in test_set:
         neighbors = nsmallest(k, training_set, key=lambda train_review: get_dist(train_review, review))
-        review.test_sentiment = weighted_vote(neighbors, review)
+        rev_and_neighbors = [neighbors, review]
+        # executor = concurrent.futures.ProcessPoolExecutor(4)
+        # futures = [executor.submit(weighted_vote, rev_and_neighbors) for review in neighbors))]
+        review.test_sentiment = weighted_vote(rev_and_neighbors)
     #     i += 1
     #     stdout.write("\r%d"%i)
     #     stdout.flush()
@@ -101,10 +107,11 @@ def get_dist(review1, review2):
     return distance
 
 
-def weighted_vote(k_neighbors, test_review):
+def weighted_vote(neighbors_and_test):
     # print("------> In Vote")
     # return classification vote
     # can do majority wins or distance weighted
+    k_neighbors, test_review = neighbors_and_test[0], neighbors_and_test[1]
     positive_count = 0.0
     negative_count = 0.0
     for neighbor in k_neighbors:
@@ -123,7 +130,6 @@ def weighted_vote(k_neighbors, test_review):
         return '+1'
     else:
         return '-1'
-
 
 def calculate_prediction_error(cross_validated_set):
     correct_predictions = 0.0
@@ -186,8 +192,13 @@ partition_size = (file_size / partitions)
 predictions = []
 error_rate = {}
 time = dt.now()
+hour = str(time.hour)
+minute = str(time.minute)
+if(len(minute) == 1):
+    minute = '0'+minute
 validation_file = "cross_validation_results" + str(time.hour) + str(time.minute) + '.csv'
 # need to change for different attributes, k easiest right now
+
 while(k < final_k):
     cross_validated_test_set = []
     for i in range(partitions):
@@ -198,7 +209,13 @@ while(k < final_k):
         train_partition, test_partition = get_cross_validation_lists(training_set, left_i, right_i)
 
         # predicting their sentiment
-        test_predictions = k_NN(k, train_partition, test_partition)
+        # executor = concurrent.futures.ProcessPoolExecutor(10)
+        pool = ThreadPool(processes=8)
+        async_result = pool.apply_async(k_NN, (k, train_partition, test_partition))
+        test_predictions = async_result.get()
+        # test_predictions = k_NN(k, train_partition, test_partition)
+
+        print(test_predictions[:15])
         cross_validated_test_set = cross_validated_test_set + test_predictions
 
     error_rate = calculate_prediction_error(cross_validated_test_set)
