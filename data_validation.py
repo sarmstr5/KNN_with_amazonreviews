@@ -15,10 +15,8 @@ small_train = 'sm_train.dat'
 small_test = 'data/sm_test.dat'
 train = 'tokenized_training_data'
 test = 'tokenized_test_data'
-train_data = train
+train_data = small_train
 test_data = test
-
-# ----for normalization---#
 begin_time = dt.now().now()
 
 
@@ -72,15 +70,12 @@ def k_NN(k, training_set, test_set):
     # select k nearest xi's
     # call set selection algorithm
     # add z to classification set
-    # print("------> In K-NN")
     i = 0
     for review in test_set:
         neighbors = nsmallest(k, training_set, key=lambda train_review: get_dist(train_review, review))
         rev_and_neighbors = [neighbors, review]
-        # executor = concurrent.futures.ProcessPoolExecutor(4)
-        # futures = [executor.submit(weighted_vote, rev_and_neighbors) for review in neighbors))]
         review.test_sentiment = weighted_vote(rev_and_neighbors)
-    #     i += 1
+    # i += 1
     #     stdout.write("\r%d"%i)
     #     stdout.flush()
     # stdout.write('\n')
@@ -100,15 +95,14 @@ def get_dist(review1, review2):
     x1_d = normalize(review1.mapping[2], min_length, max_length)
     x2_d = normalize(review2.mapping[2], min_length, max_length)
     # have not done anything for the dot product yet
-    #weights of sentiWord, learnedWord, length
+    # weights of sentiWord, learnedWord, length
     w1, w2, w3 = .5, .35, .15
     # pythagorean theorem
-    distance = math.sqrt(w1*(x2_s - x1_s) ** 2 + w2*(x2_l - x1_l) ** 2 + w3*(x2_d - x1_d) ** 2)
+    distance = math.sqrt(w1 * (x2_s - x1_s) ** 2 + w2 * (x2_l - x1_l) ** 2 + w3 * (x2_d - x1_d) ** 2)
     return distance
 
 
 def weighted_vote(neighbors_and_test):
-    # print("------> In Vote")
     # return classification vote
     # can do majority wins or distance weighted
     k_neighbors, test_review = neighbors_and_test[0], neighbors_and_test[1]
@@ -116,10 +110,8 @@ def weighted_vote(neighbors_and_test):
     negative_count = 0.0
     for neighbor in k_neighbors:
         dist = get_dist(test_review, neighbor)
-        if(dist == 0):
+        if (dist == 0):
             # can test by reading out to file
-            # neighbor.toPrint()
-            # print(str(training_set.index(neighbor)))
             continue
         if (neighbor.sentiment == '+1'):  # need to validate this check
             positive_count += 1 / dist
@@ -131,6 +123,7 @@ def weighted_vote(neighbors_and_test):
     else:
         return '-1'
 
+
 def calculate_prediction_error(cross_validated_set):
     correct_predictions = 0.0
     num_of_predictions = len(cross_validated_set)
@@ -140,7 +133,8 @@ def calculate_prediction_error(cross_validated_set):
             correct_predictions += 1
     # ratio of correct predictions e.g. 0.66
     error_percent = (correct_predictions / num_of_predictions)
-    print("correct predictions: {0} the num of predictions: {1}, {2}%".format(correct_predictions, num_of_predictions, error_percent))
+    print("correct predictions: {0} the num of predictions: {1}, {2}%".format(correct_predictions, num_of_predictions,
+                                                                              error_percent))
     return error_percent
 
 
@@ -167,61 +161,75 @@ def get_cross_validation_lists(train_set, li, ri):
     return tr_p, te_p
 
 
-# Create Objects
+def data_validation(attribute, stopping_value, thread_boolean):
+    pass
+
+# Create Dictionaries
+print(begin_time)
+print("the file size is {0}".format(len(train_data)))
 sentiWord_d = read_in_dict('cleaned_senti')
 trained_d = read_in_dict('training_sent_dict')
 freq_d = read_in_dict('training_frequency_dict')
 training_set = parse_training_set(train, sentiWord_d, trained_d, freq_d)
 min_sentiWord, max_sentiWord, min_learnedWord, max_learnedWord, min_length, max_length = find_max_min(training_set)
-
-# print('min/max sentiWord learnedWord, length, {0}/{1} {2}/{3} {4}/{5} '.format(min_sentiWord, max_sentiWord,
-#                                                                                min_learnedWord, max_learnedWord,
-#                                                                                min_length, max_length))
 shuffle(training_set)
-# Using cross validation to find parameters and attributes
-# Need to find correct k (odd), attributes (word dict, length, dot product,
-# etc.), attribute weights, compare object to each other
+
+### attributes ###
 k = 5
 final_k = 300
-weights = {'given_sentiment': 0.40, 'training_sentiment': 0.2, 'len': 0.2, 'dot_prod': 0.2}
+attribute = k
+stopping_value = final_k
 
-# breaking up the data into groups
+weights = {'given_sentiment': 0.40, 'training_sentiment': 0.2, 'len': 0.2, 'dot_prod': 0.2}
 file_size = len(training_set)
 partitions = 5
 partition_size = (file_size / partitions)
-predictions = []
-error_rate = {}
+multi_threading = False
+data_validation(k, final_k, multi_threading)
+
+# Using cross validation to find parameters and attributes
+# Need to find correct k (odd), attributes (word dict, length, dot product,
+# etc.), attribute weights, compare object to each other
 time = dt.now()
 hour = str(time.hour)
 minute = str(time.minute)
-if(len(minute) == 1):
-    minute = '0'+minute
-validation_file = "cross_validation_results" + str(time.hour) + str(time.minute) + '.csv'
-# need to change for different attributes, k easiest right now
-
-while(k < final_k):
+if (len(minute) == 1):
+    minute = '0' + minute
+validation_file = "cross_validation_results" + hour + minute + '.csv'
+error_rate = {}
+test_predictions = []
+while (attribute < stopping_value):
     cross_validated_test_set = []
+    print("on {0} and the time is: {1}".format(attribute, time))
     for i in range(partitions):
         # splitting into test/train partitions
-        # print(time)
-        # print('this is k: {0} \t this is partition: {1}'.format(k, i))
+        print('this is attribute: {0} \t this is partition: {1}'.format(attribute, i))
         left_i, right_i = get_partition_indices(i, partition_size, partitions)
         train_partition, test_partition = get_cross_validation_lists(training_set, left_i, right_i)
 
         # predicting their sentiment
-        # executor = concurrent.futures.ProcessPoolExecutor(10)
-        pool = ThreadPool(processes=8)
-        async_result = pool.apply_async(k_NN, (k, train_partition, test_partition))
-        test_predictions = async_result.get()
-        # test_predictions = k_NN(k, train_partition, test_partition)
+        if(multi_threading):
+            pool = ThreadPool(processes=1)
+            async_result = pool.apply_async(k_NN, (attribute, train_partition, test_partition))
+            test_predictions = async_result.get()
+        else:
+            test_predictions = k_NN(attribute, train_partition, test_partition)
 
-        print(test_predictions[:15])
+        print(test_predictions[0])
         cross_validated_test_set = cross_validated_test_set + test_predictions
 
     error_rate = calculate_prediction_error(cross_validated_test_set)
     time = dt.now()
-    print("on {0} and the time is: {1}".format(k, time))
     k += 10
 
     with open(validation_file, 'a') as csv:
-        csv.write('{0}\t{1}\n'.format(k, error_rate))
+        csv.write('{0}\t{1}\n'.format(attribute, error_rate))
+
+##################################### Commented out code that might still be useful
+# print('min/max sentiWord learnedWord, length, {0}/{1} {2}/{3} {4}/{5} '.format(min_sentiWord, max_sentiWord,
+#                                                                                min_learnedWord, max_learnedWord,
+#                                                                                min_length, max_length))
+# executor = concurrent.futures.ProcessPoolExecutor(10)
+# print(str(training_set.index(neighbor)))
+# executor = concurrent.futures.ProcessPoolExecutor(4)
+# futures = [executor.submit(weighted_vote, rev_and_neighbors) for review in neighbors))]

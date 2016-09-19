@@ -17,8 +17,9 @@ class Amazon_review:
         self.mapping = 0
 
     def toPrint(self):
-        print("\nThe sentiment is {0}\n text is {1}\nsentiWord, is {2}\nlearnedWord is {3} \nlength  is {4} \n".format(
-            self.sentiment, self.text, self.mapping[0], self.mapping[1], self.mapping[2]))
+        print("\nThe sentiment is {0}\n text is {1}\nsentiWord, is {2}\nlearnedWord is {3} \nlength  is {4} \n"
+              "the predicted sentiment is  {5}\n".format(self.sentiment, self.text, self.mapping[0], self.mapping[1],
+                                                         self.mapping[2], self.test_sentiment))
 
     # defining class properties for normalizing
     @property
