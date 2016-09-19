@@ -5,6 +5,7 @@ from sys import stdout
 from random import shuffle
 from datetime import datetime as dt
 from multiprocessing.pool import ThreadPool
+from multiprocessing import Pool, cpu_count
 from threading import Thread
 import json
 import math
@@ -159,163 +160,65 @@ def print_results_to_csv(test_list):
             # results.write(review.toPrint())
             csv.write('{0}\t{1}\n'.format(review.test_sentiment, review.text))
 
+if __name__ == '__main__':
+    # Beginning Script
+    # Create Dictionaries
+    print("Initializing Script")
+    print(begin_time)
+    sentiWord_d = read_in_dict('cleaned_senti')
+    trained_d = read_in_dict('training_sent_dict')
+    freq_d = read_in_dict('training_frequency_dict')
 
-# Beginning Script
-# Create Dictionaries
-print("Initializing Script")
-print(begin_time)
-sentiWord_d = read_in_dict('cleaned_senti')
-trained_d = read_in_dict('training_sent_dict')
-freq_d = read_in_dict('training_frequency_dict')
+    # Read in training file
+    print("Creating Test Set")
+    training_list = parse_training_set(train_data, sentiWord_d, trained_d, freq_d)
+    print("the training file size is {0}".format(len(training_list)))
+    min_sentiWord, max_sentiWord, min_learnedWord, max_learnedWord, min_length, max_length = find_max_min(training_list)
 
-# Read in training file
-print("Creating Test Set")
-training_list = parse_training_set(train_data, sentiWord_d, trained_d, freq_d)
-print("the training file size is {0}".format(len(training_list)))
-min_sentiWord, max_sentiWord, min_learnedWord, max_learnedWord, min_length, max_length = find_max_min(training_list)
+    # Read in text file
+    print("Training set and sentiment dictionaries created.  Next test predictions")
+    test_list = parse_test_set(test_data, sentiWord_d, trained_d, freq_d)
+    print("the test file size is {0}".format(len(test_list)))
 
-# Read in text file
-print("Training set and sentiment dictionaries created.  Next test predictions")
-test_list = parse_test_set(test_data, sentiWord_d, trained_d, freq_d)
-print("the test file size is {0}".format(len(test_list)))
+    ### attributes ###
+    print("Predicting Review Sentiments")
+    k = 3
+    regular_run = False
+    multithreading = False*(1-regular_run)
+    multiprocessing = (not multithreading)*(1-regular_run)
+    # Classifying test set using multithreading or multiprocessing or neither
+    # k_NN is the classifying function. Arguments of k_NN are passed as a tuple
+    while (k < 100):
+        t = dt.now().now()
+        print("Beginning classification at\n{0}\n".format(dt.now().now()))
+        if ( multithreading ):
+            pool = ThreadPool(processes=2)
+            async_result = pool.apply_async(k_NN, (k, training_list, test_list))
+            updated_test_set = async_result.get()
+        elif( multiprocessing ):
+            pool = Pool(processes=cpu_count())
+            updated_test_set = k_NN(k, training_list, test_list)
+            async_result = pool.apply_async(k_NN, (k, training_list, test_list))
+            updated_test_set = async_result.get()
+        else:
+            k_NN(k, training_list, test_list)
 
-### attributes ###
-print("Predicting Review Sentiments")
-k = 5
+        print(dt.now().now())
 
-# Classifying test set using multithreading
-# k_NN is the classifying function. Arguments of k_NN are passed as a tuple
-# pool = ThreadPool(processes=2)
-# async_result = pool.apply_async(k_NN, (k, training_list, test_list))
-# updated_test_set = async_result.get()
-print(dt.now().now())
-updated_test_set = k_NN(k, training_list, test_list)
-print(dt.now().now())
+        # print results as csv for upload
+        print("Printing test output files\n")
+        print("The size of the test set {0}, size of updated test set: {2}".format(len(updated_test_set),
+                                                                                   len(test_list)))
+        print_results_to_csv(updated_test_set)
+        t2 = dt.now().now()
+        with open('time.txt', 'a') as txt:
+            txt.write("{0}\t{1}\t{2}\n".format(k, t, t2))
+        k += 5
 
-# print results as csv for upload
-print("Printing test output files")
-print_results_to_csv(updated_test_set)
+    # def plot(test_results):
+    #     pass
+    #     dists=[review.mapping for review in test_set]
+    #     sentiments = [review.sentiment for review in test_set]
+    #     plt.plot(dists, sentiments)
+    #     plt.show()
 
-# def plot(test_results):
-#     pass
-#     dists=[review.mapping for review in test_set]
-#     sentiments = [review.sentiment for review in test_set]
-#     plt.plot(dists, sentiments)
-#     plt.show()
-
-#
-# def k_NN(k,training_set,test_set):
-#     #for each test entity z
-#     #select k nearest xi's
-#     #call set selection algorithm
-#     #add z to classification set
-#     #print("------> In K-NN")
-#     neighbors = []
-#     time = datetime.datetime.now()
-#     output= open("sentiment_output"+str(time.hour)+str(time.minute),'wt')
-#     i =0
-#     #need to return the the tuples of the training set (at least the sentiment)
-#     for review in test_set:
-#         neighbors = nsmallest(k,training_set, key= lambda train_review:
-#                               get_dist(train_review, review))
-#         review.sentiment = vote(neighbors, review)
-#         #print(str(test_set.index(review)),review.sentiment)
-#         i+=1
-#         #output.write(str(review.sentiment)+'\t'+str(review.mapping)+"\n")
-#         output.write(str(review.sentiment)+"\n")
-#         stdout.write("\r%d"%i)
-#         stdout.flush()
-#     stdout.write('\n')
-#     return test_set
-#
-# def normalize(x, xmin, xmax):
-#     return((x - xmin)/(xmax - xmin))
-#
-# def get_dist(review1, review2):
-# #    global most_negative_review
-# #    global least_negative_review
-# #    global most_positive_review
-# #    global least_positive_review
-# #    global longest_review
-# #    global shortest_review
-#     r1_p = normalize(review1.mapping[0],least_positive_review,most_positive_review)
-#     r1_n = normalize(review1.mapping[1],least_negative_review,most_negative_review)
-#     r1_d = normalize(review1.mapping[2],shortest_review, longest_review)
-#     r2_p = normalize(review2.mapping[0],least_positive_review,most_positive_review)
-#     r2_n = normalize(review2.mapping[1],least_negative_review,most_negative_review)
-#     r2_d = normalize(review2.mapping[2],shortest_review, longest_review)
-#     #pythagorean theorem d = sqrt((x2-x1)^2+(y2-y1)^2)
-#     distance = math.sqrt((r2_p-r1_p)**2 + (r2_n - r1_n)**2 + (r2_d - r1_d)**2)
-#     #print(distance)
-#     return distance
-#
-# def vote(k_neighbors, test_review):
-#     #print("------> In Vote")
-#     #return classification vote
-#     #can do majority wins or distance weighted
-#     positive_count = 0
-#     negative_count = 0
-#     weighted_vote = 0
-#     for neighbor in k_neighbors:
-#         if(neighbor.sentiment == '+1'): #need to validate this check
-#             positive_count+=1
-#
-#         else:
-#             negative_count+=1
-#     if(positive_count>negative_count):
-#         return '+1'
-#     else:
-#         return '-1'
-# def reduce_dictionary(sentiment_dict):
-#     pass
-#
-# def main():
-
-#    print("Training parse next feature calc")
-#    training_set = calc_feature(training_list)
-#    print(training_set)
-#    print("test_set feature calc")
-#    test_set = calc_feature(test_list)
-
-# if __name__ == '__main__':
-#     main()
-
-# def calculate_prediction_error(cross_validated_set):
-#     correct_predictions = 0.0
-#     num_of_predictions = len(cross_validated_set)
-#     print(num_of_predictions)
-#     for review in cross_validated_set:
-#         if (review.test_sentiment == review.sentiment):
-#             correct_predictions += 1
-#     # ratio of correct predictions e.g. 0.66
-#     error_percent = (correct_predictions / num_of_predictions)
-#     print("correct predictions: {0} the num of predictions: {1}, {2}%".format(correct_predictions, num_of_predictions,
-#                                                                               error_percent))
-#     return error_percent
-#
-#
-# def get_partition_indices(current_partition, partition_size, number_of_partitions):
-#     left_index = int(round(partition_size * current_partition))
-#     right_index = int(round(partition_size * (number_of_partitions - (number_of_partitions - current_partition - 1))))
-#     return left_index, right_index
-#
-#
-# def get_cross_validation_lists(train_set, li, ri):
-#     # getting the left and right of the trainings
-#     if (li == 0):
-#         li = 1
-#     left = train_set[:li - 1]  # was originally li-1 but first case caused overlap
-#     right = []
-#     if (ri < len(train_set) - 1):
-#         right = train_set[ri:]
-#     tr_p = left + right
-#     te_p = train_set[li:ri - 1]
-#     # print("left index: {0} right index: {1}".format(li, ri))
-#     # print(tr_p[0].text)
-#     # print(te_p[0].text)
-#     # print(right[0].text)
-#     return tr_p, te_p
-#
-#
-# def data_validation(attribute, stopping_value, thread_boolean):
-#     pass

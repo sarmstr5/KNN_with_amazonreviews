@@ -4,7 +4,7 @@ from sys import stdout
 from random import shuffle
 from datetime import datetime as dt
 #from threading import Thread
-#from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import ThreadPool
 import json
 import math
 #import concurrent
@@ -176,7 +176,7 @@ shuffle(training_set)
 
 ### attributes ###
 k = 5
-final_k = 300
+final_k =50
 attribute = k
 stopping_value = final_k
 
