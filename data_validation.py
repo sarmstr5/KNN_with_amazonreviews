@@ -3,11 +3,11 @@ from Amazon_review import Amazon_review
 from sys import stdout
 from random import shuffle
 from datetime import datetime as dt
-from threading import Thread
-from multiprocessing.pool import ThreadPool
+#from threading import Thread
+#from multiprocessing.pool import ThreadPool
 import json
 import math
-import concurrent
+#import concurrent
 
 training_set = []
 test_set = []
