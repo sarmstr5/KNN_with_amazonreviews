@@ -1,0 +1,5 @@
+3	0.0	52.48	55.21	multithreading
+15	0.0	59.45	14.28	multithreading
+30	0.0	15.7	29.51	multithreading
+30	0.0	35.50	50.39	multithreading
+25	0.0	53.57	8.59	multithreading

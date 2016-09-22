@@ -13,8 +13,6 @@ import concurrent
 
 training_set = []
 test_set = []
-small_train = 'sm_train.dat'
-small_test = 'sm_test.dat'
 train = 'tokenized_training_data'
 test = 'tokenized_test_data'
 train_data = train
@@ -111,7 +109,7 @@ def get_dist(review1, review2):
     x2_d = normalize(review2.mapping[2], min_length, max_length)
     # have not done anything for the dot product yet
     # weights of sentiWord, learnedWord, length
-    w1, w2, w3 = .5, .35, .15
+    w1, w2, w3 = .85, .1, .5
     # pythagorean theorem
     distance = math.sqrt(w1 * (x2_s - x1_s) ** 2 + w2 * (x2_l - x1_l) ** 2 + w3 * (x2_d - x1_d) ** 2)
     return distance
@@ -153,14 +151,15 @@ def print_results_to_csv(test_list):
             results.write('{0}\n'.format(review.test_sentiment))
 
     with open(test_reviews, 'w') as csv:
-        r = test_list[0]
-        "predicted sentiment\ttext \tsentiWord\tlearnedWord\tlength\n".format(r.test_sentiment, r.text, r.mapping[0],
-                                                                              r.mapping[1], r.mapping[2])
+        # r = test_list[0]
+        # "predicted sentiment\ttext \tsentiWord\tlearnedWord\tlength\n".format(r.test_sentiment, r.text, r.mapping[0],
+        #                                                                     r.mapping[1], r.mapping[2])
         for review in test_list:
             # results.write(review.toPrint())
             csv.write('{0}\t{1}\n'.format(review.test_sentiment, review.text))
 
 if __name__ == '__main__':
+
     # Beginning Script
     # Create Dictionaries
     print("Initializing Script")
@@ -170,7 +169,7 @@ if __name__ == '__main__':
     freq_d = read_in_dict('training_frequency_dict')
 
     # Read in training file
-    print("Creating Test Set")
+    print("Creating Training Set")
     training_list = parse_training_set(train_data, sentiWord_d, trained_d, freq_d)
     print("the training file size is {0}".format(len(training_list)))
     min_sentiWord, max_sentiWord, min_learnedWord, max_learnedWord, min_length, max_length = find_max_min(training_list)
@@ -182,38 +181,47 @@ if __name__ == '__main__':
 
     ### attributes ###
     print("Predicting Review Sentiments")
-    k = 3
+    k = 25
     regular_run = False
-    multithreading = False*(1-regular_run)
+    multithreading = True*(1-regular_run)
+    threads = 8
     multiprocessing = (not multithreading)*(1-regular_run)
+    updated_test_list = []
     # Classifying test set using multithreading or multiprocessing or neither
-    # k_NN is the classifying function. Arguments of k_NN are passed as a tuple
-    while (k < 100):
-        t = dt.now().now()
-        print("Beginning classification at\n{0}\n".format(dt.now().now()))
-        if ( multithreading ):
-            pool = ThreadPool(processes=2)
-            async_result = pool.apply_async(k_NN, (k, training_list, test_list))
-            updated_test_set = async_result.get()
-        elif( multiprocessing ):
-            pool = Pool(processes=cpu_count())
-            updated_test_set = k_NN(k, training_list, test_list)
-            async_result = pool.apply_async(k_NN, (k, training_list, test_list))
-            updated_test_set = async_result.get()
-        else:
-            k_NN(k, training_list, test_list)
+    # k_NN is the classifying function. Arguments of k:_NN are passed as a tuple
+    # while (threads < 20):
+    t = dt.now().now()
+    print("Beginning classification at\n{0}\n".format(dt.now().now()))
+    if ( multithreading ):
+        print("multithreading")
+        pool = ThreadPool(processes=threads)
+        async_result = pool.apply_async(k_NN, (k, training_list, test_list))
+        updated_test_list = async_result.get()
+    elif( multiprocessing ):
+        print("multiprocessing")
+        pool = Pool(processes=cpu_count())
+        updated_test_list = k_NN(k, training_list, test_list)
+        async_result = pool.apply_async(k_NN, (k, training_list, test_list))
+        updated_test_list = async_result.get()
+    else:
+        print("processing")
+        updated_test_list = k_NN(k, training_list, test_list)
 
-        print(dt.now().now())
+    print(dt.now().now())
 
-        # print results as csv for upload
-        print("Printing test output files\n")
-        print("The size of the test set {0}, size of updated test set: {2}".format(len(updated_test_set),
-                                                                                   len(test_list)))
-        print_results_to_csv(updated_test_set)
-        t2 = dt.now().now()
-        with open('time.txt', 'a') as txt:
-            txt.write("{0}\t{1}\t{2}\n".format(k, t, t2))
-        k += 5
+    # print results as csv for upload
+    print("Printing test output files\n")
+    print("The size of the update test set {0}, size of test set: {1}".format(len(updated_test_list),
+                                                                               len(test_list)))
+    print_results_to_csv(updated_test_list)
+    t2 = dt.now().now()
+    t1 = "{0}.{1}".format(t.minute, t.second)
+    t2 = "{0}.{1}".format(t2.minute, t2.second)
+    time_delta = float(t2) - float(t2)
+
+    with open('time_run.txt', 'a') as txt:
+        txt.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(k, time_delta, t1, t2,"multithreading"))
+        # threads += 1
 
     # def plot(test_results):
     #     pass
